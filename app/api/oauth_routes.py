@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.services.oauth_service import google_login_callback, get_google_auth_url
 from typing import Dict, Any
+from app.config.OAuth import oauth
 import logging
 
 logger = logging.getLogger(__name__)

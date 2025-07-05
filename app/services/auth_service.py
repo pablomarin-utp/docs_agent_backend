@@ -52,6 +52,14 @@ async def login_user(data: LoginRequest, db: Session) -> dict:
             detail="Invalid credentials."
         )
 
+     # ✅ NUEVO: Check if user is OAuth-only (empty password)
+    if not user.hashed_password or user.hashed_password == "":
+        logger.warning(f"OAuth user trying to login with password: {data.email}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This account uses Google sign-in. Please use the Google login option."
+        )
+    
     # Verify password
     if not bcrypt.checkpw(data.password.encode(), user.hashed_password.encode()):
         logger.warning(f"Login attempt failed (wrong password): {data.email}")
@@ -73,7 +81,8 @@ async def login_user(data: LoginRequest, db: Session) -> dict:
         "email": user.email, 
         "id": str(user.id), 
         "is_active": user.is_active, 
-        "is_admin": user.is_admin
+        "is_admin": user.is_admin,
+        "auth_method": "password" 
     })
 
     logger.info(f"User authenticated successfully: {user.email}")

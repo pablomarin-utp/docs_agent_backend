@@ -27,8 +27,6 @@ async def google_callback(request: Request, db: Session = Depends(get_db)) -> Di
     try:
         result = await google_login_callback(request, db)
         
-        # In production, you might want to redirect to your frontend with the token
-        # For now, return the token directly
         return result
         
     except Exception as e:

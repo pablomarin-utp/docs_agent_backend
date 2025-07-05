@@ -1,3 +1,4 @@
+
 from app.config.OAuth import oauth
 from app.core.models import User
 from app.services.jwt_service import create_access_token
@@ -5,7 +6,6 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException, Request
 from typing import Dict, Any
 import logging
-from uuid import uuid4
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,6 @@ async def google_login_callback(request: Request, db: Session) -> Dict[str, Any]
             user_info = await oauth.google.parse_id_token(request, token)
         
         email = user_info.get('email')
-        name = user_info.get('name', '')
         
         if not email:
             raise HTTPException(status_code=400, detail="Email not provided by Google")
@@ -30,27 +29,24 @@ async def google_login_callback(request: Request, db: Session) -> Dict[str, Any]
         user = db.query(User).filter(User.email == email).first()
         
         if not user:
-            # Create new user with Google OAuth
+            # Create new user - OAuth users get empty password and auto-activation
             user = User(
                 email=email,
-                hashed_password="",  # No password for OAuth users
-                is_active=True,  # Auto-activate OAuth users
-                is_oauth=True,  # Add this field to track OAuth users
-                oauth_provider="google"
+                hashed_password="",  # Empty for OAuth identification
+                is_active=True,      # Auto-activate OAuth users
+                credits=10           # Give initial credits
             )
             db.add(user)
             db.commit()
             db.refresh(user)
             logger.info(f"New Google OAuth user created: {email}")
         else:
-            # Update existing user to mark as OAuth if not already
-            if not getattr(user, 'is_oauth', False):
-                user.is_oauth = True
-                user.oauth_provider = "google"
-                user.is_active = True  # Activate if not active
+            # If existing user, activate if not active
+            if not user.is_active:
+                user.is_active = True
                 db.commit()
         
-        # Generate JWT token
+        # Generate JWT token (same as normal login)
         access_token = create_access_token(data={
             "email": user.email,
             "id": str(user.id),
@@ -74,7 +70,7 @@ async def google_login_callback(request: Request, db: Session) -> Dict[str, Any]
     except Exception as e:
         logger.error(f"Google OAuth error: {str(e)}")
         raise HTTPException(status_code=400, detail=f"OAuth authentication failed: {str(e)}")
-
+    
 async def get_google_auth_url(request: Request) -> str:
     """Get Google OAuth authorization URL"""
     redirect_uri = request.url_for('google_callback')

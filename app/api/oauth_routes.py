@@ -5,6 +5,7 @@ from app.core.database import get_db
 from app.services.oauth_service import google_login_callback, get_google_auth_url
 from typing import Dict, Any
 from app.config.OAuth import oauth
+from app.config.urls import FRONTEND_URL
 import logging
 
 logger = logging.getLogger(__name__)
@@ -22,16 +23,30 @@ async def google_login(request: Request):
         raise HTTPException(status_code=500, detail="OAuth initiation failed")
 
 @router.get("/google/callback")
-async def google_callback(request: Request, db: Session = Depends(get_db)) -> Dict[str, Any]:
-    """Handle Google OAuth callback"""
+async def google_callback(request: Request, db: Session = Depends(get_db)):
+    """Handle Google OAuth callback and redirect to frontend"""
     try:
+        # Process OAuth and get JWT token
         result = await google_login_callback(request, db)
         
-        return result
+        # Extract token and user info
+        logger.debug(f"Google OAuth result: {result}")
+        access_token = result["access_token"]
+        user_info = result.get("user", {})
+        
+        # Redirect to frontend with token
+        frontend_url = FRONTEND_URL + "/oauth/callback"
+        redirect_url = f"{frontend_url}?token={access_token}&email={user_info.get('email', '')}&auth_method={user_info.get('auth_method', 'oauth')}"
+        
+        logger.info(f"Redirecting OAuth user to frontend: {user_info}")
+        return RedirectResponse(url=redirect_url, status_code=302)
         
     except Exception as e:
         logger.error(f"Google OAuth callback error: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        # Redirect to login with error
+        error_url = f"{FRONTEND_URL}/login?error=oauth_failed&message={str(e)}"
+        return RedirectResponse(url=error_url, status_code=302)
+    
 
 @router.get("/google/url")
 async def get_google_login_url(request: Request) -> Dict[str, str]:

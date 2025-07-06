@@ -30,6 +30,7 @@ async def build_conversation_history(conversation: Conversation, user_id: UUID, 
         messages.append({
             "role": msg["role"],
             "content": msg["content"]
+            # ✅ Remove any date-related fields from messages
         })
 
     return messages

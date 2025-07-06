@@ -9,20 +9,25 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-async def google_login_callback(request: Request, db: Session) -> Dict[str, Any]:
+async def google_login_callback(request: Request, db: Session) -> dict:
     """Handle Google OAuth callback and create/login user"""
     try:
         # Get the access token from Google
+        logger.info("Processing Google OAuth callback")
+
         token = await oauth.google.authorize_access_token(request)
+        logger.info("Successfully got token from Google")
         
         # Get user info from Google
         user_info = token.get('userinfo')
         if not user_info:
+            logger.info("No userinfo in token, parsing ID token")
             user_info = await oauth.google.parse_id_token(request, token)
         
         email = user_info.get('email')
         
         if not email:
+            logger.error("Google OAuth user did not provide an email")
             raise HTTPException(status_code=400, detail="Email not provided by Google")
         
         # Check if user exists
@@ -56,17 +61,8 @@ async def google_login_callback(request: Request, db: Session) -> Dict[str, Any]
         })
         
         logger.info(f"Google OAuth user authenticated: {email}")
-        return {
-            "access_token": access_token,
-            "token_type": "bearer",
-            "user": {
-                "id": str(user.id),
-                "email": user.email,
-                "is_active": user.is_active,
-                "auth_method": "oauth"
-            }
-        }
-        
+        return {"access_token": access_token, "token_type": "bearer", "user": {"email": user.email, "auth_method": "oauth"}}
+
     except Exception as e:
         logger.error(f"Google OAuth error: {str(e)}")
         raise HTTPException(status_code=400, detail=f"OAuth authentication failed: {str(e)}")

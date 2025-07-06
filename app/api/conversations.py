@@ -137,6 +137,7 @@ async def send_message(
 
         credits_deducted = await deduct_credits(user.id, amount=1, db=db)
 
+        # ✅ Return response without date information
         return {"message": assistant_message, "credits_remaining": credits_deducted}
 
     except Exception as e:

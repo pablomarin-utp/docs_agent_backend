@@ -6,8 +6,8 @@ from app.config.load import (
 )
 
 config_data = {
-    'GOOGLE_CLOUD_CLIENT_ID': GOOGLE_CLOUD_CLIENT_ID,
-    'GOOGLE_CLOUD_CLIENT_SECRET': GOOGLE_CLOUD_CLIENT_SECRET,
+    'GOOGLE_CLIENT_SECRET': GOOGLE_CLOUD_CLIENT_SECRET,
+    'GOOGLE_CLIENT_ID': GOOGLE_CLOUD_CLIENT_ID,
 }
 
 config = Config(environ=config_data)

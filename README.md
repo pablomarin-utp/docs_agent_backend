@@ -10,7 +10,7 @@
 [![Azure OpenAI](https://img.shields.io/badge/Azure-OpenAI-orange.svg)](https://azure.microsoft.com/en-us/products/ai-services/openai-service)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-[📚 **Full Documentation**](https://documentation_agent.com) • [🚀 **Quick Start**](#-quick-start) • [🔧 **API Reference**](#-api-endpoints) • [🏗️ **Architecture**](#-architecture)
+[📚 **Full Documentation**](https://documentation-agent.com) • [🚀 **Quick Start**](#-quick-start) • [🔧 **API Reference**](#-api-endpoints) • [🏗️ **Architecture**](#-architecture)
 
 </div>
 
@@ -40,7 +40,7 @@ A **production-ready backend API** that transforms your documents into an intell
 
 ### 1️⃣ Clone & Install
 ```bash
-git clone https://github.com/your-username/ai-documentation-agent.git
+git clone https://github.com/pablomarin/ai-documentation-agent.git
 cd ai-documentation-agent/backend
 poetry install
 poetry shell
@@ -58,7 +58,7 @@ cp .env.example .env
 docker run -p 6333:6333 qdrant/qdrant
 
 # Run the API
-uvicorn main:app --reload --port 8001
+poetry run dev
 ```
 
 ### 4️⃣ Test the API
@@ -127,7 +127,7 @@ graph TB
 - JWT-based authentication
 - Role-based access control
 - Credit system for usage tracking
-- Session management
+- OAuth integration (Google)
 
 </td>
 <td width="50%">
@@ -142,7 +142,7 @@ graph TB
 - FastAPI with async support
 - PostgreSQL with SQLAlchemy ORM
 - Comprehensive error handling
-- Structured logging
+- Structured logging with security
 
 </td>
 </tr>
@@ -158,7 +158,7 @@ graph TB
 | **🤖 AI/ML** | Azure OpenAI + LangChain | LLM integration and agent workflows |
 | **🔍 Vector Search** | Qdrant | Semantic search and embeddings storage |
 | **🗃️ Database** | PostgreSQL + SQLAlchemy | User data and conversation history |
-| **🔐 Authentication** | JWT + bcrypt | Secure user authentication |
+| **🔐 Authentication** | JWT + bcrypt + OAuth | Secure user authentication |
 | **📄 Document Processing** | PyPDF2 + tiktoken | PDF parsing and text chunking |
 | **🧪 Testing** | pytest + unittest.mock | Comprehensive test coverage |
 
@@ -345,7 +345,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - 📧 **Email**: support@documentation-agent.com
 - 💬 **Discord**: [Join our community](https://discord.gg/ai-docs-agent)
-- 🐛 **Issues**: [GitHub Issues](https://github.com/your-username/ai-documentation-agent/issues)
+- 🐛 **Issues**: [GitHub Issues](https://github.com/pablomarin/ai-documentation-agent/issues)
 - 📖 **Docs**: [documentation_agent.com](https://documentation_agent.com)
 
 ---

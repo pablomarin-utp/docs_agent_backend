@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8001:8001"
+    environment:
+      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
+      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
+      - AZURE_OPENAI_DEPLOYMENT_NAME=${AZURE_OPENAI_DEPLOYMENT_NAME}
+      - AZURE_OPENAI_API_VERSION=${AZURE_OPENAI_API_VERSION}
+      - AZURE_OPENAI_EMBEDDINGS_API_KEY=${AZURE_OPENAI_EMBEDDINGS_API_KEY}
+      - AZURE_OPENAI_EMBEDDINGS_ENDPOINT=${AZURE_OPENAI_EMBEDDINGS_ENDPOINT}
+      - AZURE_OPENAI_EMBEDDINGS_DEPLOYMENT_NAME=${AZURE_OPENAI_EMBEDDINGS_DEPLOYMENT_NAME}
+      - QDRANT_URL=http://qdrant:6333
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-ai_agent_db}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - SECRET_KEY=${SECRET_KEY}
+      - GOOGLE_CLOUD_CLIENT_ID=${GOOGLE_CLOUD_CLIENT_ID}
+      - GOOGLE_CLOUD_CLIENT_SECRET=${GOOGLE_CLOUD_CLIENT_SECRET}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
+    depends_on:
+      - postgres
+      - qdrant
+    volumes:
+      - .:/app
+    restart: unless-stopped
+    networks:
+      - ai-agent-network
+
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=${DB_NAME:-ai_agent_db}
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - ai-agent-network
+
+  qdrant:
+    image: qdrant/qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: unless-stopped
+    networks:
+      - ai-agent-network
+
+volumes:
+  postgres_data:
+  qdrant_data:
+
+networks:
+  ai-agent-network:
+    driver: bridge

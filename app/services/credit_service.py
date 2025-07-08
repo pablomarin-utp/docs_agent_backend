@@ -12,7 +12,20 @@ async def deduct_credits(
     amount: int,
     db: Session
 ) -> bool:
-    """Deduct credits from user account."""
+    """
+    Deduct credits from a user's account.
+    
+    Args:
+        user_id: UUID of the user
+        amount: Number of credits to deduct
+        db: Database session
+        
+    Returns:
+        True if credits were successfully deducted, False if insufficient credits
+        
+    Raises:
+        HTTPException: If user not found
+    """
     logger.info("Deducting credits", user_id=user_id, amount=amount)
     
     try:
@@ -41,7 +54,20 @@ async def add_credits(
     amount: int,
     db: Session
 ) -> Dict[str, Any]:
-    """Add credits to user account."""
+    """
+    Add credits to a user's account.
+    
+    Args:
+        user_id: UUID of the user
+        amount: Number of credits to add
+        db: Database session
+        
+    Returns:
+        Dictionary with updated credit balance and message
+        
+    Raises:
+        HTTPException: If user not found
+    """
     logger.info("Adding credits", user_id=user_id, amount=amount)
     
     try:

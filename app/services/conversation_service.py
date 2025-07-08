@@ -14,7 +14,18 @@ async def get_user_conversations(
     limit: Optional[int] = 50,
     offset: Optional[int] = 0
 ) -> List[Dict[str, Any]]:
-    """Get all conversations for a specific user."""
+    """
+    Get all conversations for a specific user.
+    
+    Args:
+        user_id: UUID of the user
+        db: Database session
+        limit: Maximum number of conversations to return
+        offset: Number of conversations to skip
+        
+    Returns:
+        List of conversation dictionaries in JSON format
+    """
     logger.info("Fetching user conversations", user_id=user_id, limit=limit, offset=offset)
     
     try:
@@ -50,7 +61,17 @@ async def get_conversation_by_id(
     user_id: UUID,
     db: Session
 ) -> Conversation:
-    """Get a specific conversation by ID for a user."""
+    """
+    Get a specific conversation by ID for a user.
+    
+    Args:
+        conversation_id: UUID of the conversation
+        user_id: UUID of the user
+        db: Database session
+        
+    Returns:
+        Conversation object or None if not found
+    """
     logger.debug("Fetching conversation by ID", conversation_id=conversation_id, user_id=user_id)
     
     try:
@@ -77,7 +98,17 @@ async def create_conversation(
     title: str,
     db: Session
 ) -> Dict[str, Any]:
-    """Create a new conversation for a user."""
+    """
+    Create a new conversation for a user.
+    
+    Args:
+        user_id: UUID of the user
+        title: Title of the conversation
+        db: Database session
+        
+    Returns:
+        Dictionary with conversation data
+    """
     logger.info("Creating new conversation", user_id=user_id, title=title)
     
     try:
@@ -112,7 +143,18 @@ async def update_conversation_summary(
     summary: str,
     db: Session
 ) -> Dict[str, Any]:
-    """Update the summary of a conversation."""
+    """
+    Update the summary of a conversation.
+    
+    Args:
+        conversation_id: UUID of the conversation
+        user_id: UUID of the user
+        summary: New summary text
+        db: Database session
+        
+    Returns:
+        Dictionary with updated conversation data
+    """
     logger.debug("Updating conversation summary", conversation_id=conversation_id, user_id=user_id)
     
     try:
@@ -148,7 +190,20 @@ async def delete_conversation_service(
     user_id: UUID,
     db: Session
 ) -> bool:
-    """Delete a conversation and all its messages for a user."""
+    """
+    Delete a conversation and all its messages for a user.
+    
+    Args:
+        conversation_id: UUID of the conversation
+        user_id: UUID of the user
+        db: Database session
+        
+    Returns:
+        True if deletion was successful
+        
+    Raises:
+        HTTPException: If conversation not found or deletion fails
+    """
     logger.info("Deleting conversation", conversation_id=conversation_id, user_id=user_id)
     
     try:

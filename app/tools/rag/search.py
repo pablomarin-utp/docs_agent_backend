@@ -5,33 +5,44 @@ from app.config.qdrant import qdrant_client
 from app.schemas.tools_schema import RAGQueryInput, RagSearchArgs
 from app.config.embeddings import embedding_model
 from langchain_core.messages import ToolMessage
+from app.utils.logging_utils import get_secure_logger
 
-logger = logging.getLogger(__name__)
+logger = get_secure_logger(__name__)
 
 
 @tool(args_schema=RAGQueryInput)
 def rag_qdrant_search(query: str, collection: str, top_k: int = 5) -> str:
-    logger.info(f"Received RAG query: {query} with top_k={top_k}")
+    logger.info("Executing RAG search", query=query, collection=collection, top_k=top_k)
     
-    query_vector = embedding_model.embed_query(query)
-    
-    results = qdrant_client.search(
-        collection_name=collection,
-        query_vector=query_vector,
-        limit=top_k,
-        with_payload=True
-    )
-    
-    docs_text: List[str] = [
-        result.payload.get("text", "") 
-        for result in results 
-        if result.payload.get("text")
-    ]
-    
-    if not docs_text:
-        return "No se encontraron documentos relevantes para esta consulta en la colección especificada."
-    
-    return "\n\n".join(docs_text)
+    try:
+        query_vector = embedding_model.embed_query(query)
+        logger.debug("Query vector generated successfully", collection=collection)
+        
+        results = qdrant_client.search(
+            collection_name=collection,
+            query_vector=query_vector,
+            limit=top_k,
+            with_payload=True
+        )
+        
+        logger.debug("Qdrant search completed", collection=collection, results_count=len(results))
+        
+        docs_text: List[str] = [
+            result.payload.get("text", "") 
+            for result in results 
+            if result.payload.get("text")
+        ]
+        
+        if not docs_text:
+            logger.warning("No relevant documents found", query=query, collection=collection)
+            return "No se encontraron documentos relevantes para esta consulta en la colección especificada."
+        
+        logger.info("RAG search completed successfully", collection=collection, docs_found=len(docs_text))
+        return "\n\n".join(docs_text)
+        
+    except Exception as e:
+        logger.error("RAG search failed", query=query, collection=collection, error=str(e))
+        return f"Error en la búsqueda: {str(e)}"
 
 
 

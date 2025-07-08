@@ -1,12 +1,12 @@
 from sqlalchemy.orm import Session
 from app.core.models import Conversation, Message, User
 from typing import List, Optional, Dict, Any
-import logging
 from datetime import datetime, timezone
 from fastapi import HTTPException
 from uuid import UUID
+from app.utils.logging_utils import get_secure_logger
 
-logger = logging.getLogger(__name__)
+logger = get_secure_logger(__name__)
 
 async def get_user_conversations(
     user_id: UUID, 
@@ -14,19 +14,19 @@ async def get_user_conversations(
     limit: Optional[int] = 50,
     offset: Optional[int] = 0
 ) -> List[Dict[str, Any]]:
-    """
-    Get all conversations for a specific user.
-    Returns a list of conversation dictionaries in JSON format.
-    """
+    """Get all conversations for a specific user."""
+    logger.info("Fetching user conversations", user_id=user_id, limit=limit, offset=offset)
+    
     try:
-        logger.info(f"Getting conversations for user {user_id} with limit {limit} and offset {offset}")
         conversations = db.query(Conversation)\
             .filter(Conversation.user_id == user_id)\
             .order_by(Conversation.updated_at.desc())\
             .offset(offset)\
             .limit(limit)\
             .all()
-        logger.debug(f"Found {len(conversations)} conversations for user {user_id}")
+        
+        logger.debug("Conversations query completed", user_id=user_id, count=len(conversations))
+        
         # Convert SQLAlchemy objects to dictionaries
         conversations_json = []
         for conv in conversations:
@@ -38,12 +38,12 @@ async def get_user_conversations(
                 "updated_at": conv.updated_at.isoformat() + "Z"
             })
         
-        logger.info(f"Retrieved {len(conversations_json)} conversations for user {user_id}")
+        logger.info("Conversations retrieved successfully", user_id=user_id, count=len(conversations_json))
         return conversations_json
         
     except Exception as e:
-        logger.error(f"Error getting conversations for user {user_id}: {str(e)}")
-        raise
+        logger.error("Error fetching user conversations", user_id=user_id, error=str(e))
+        raise HTTPException(status_code=500, detail="Failed to fetch conversations")
 
 async def get_conversation_by_id(
     conversation_id: UUID,
@@ -51,6 +51,8 @@ async def get_conversation_by_id(
     db: Session
 ) -> Conversation:
     """Get a specific conversation by ID for a user."""
+    logger.debug("Fetching conversation by ID", conversation_id=conversation_id, user_id=user_id)
+    
     try:
         conversation = db.query(Conversation)\
             .filter(
@@ -60,12 +62,14 @@ async def get_conversation_by_id(
             .first()
         
         if not conversation:
+            logger.warning("Conversation not found", conversation_id=conversation_id, user_id=user_id)
             return None
-            
+        
+        logger.debug("Conversation found", conversation_id=conversation_id, user_id=user_id)
         return conversation
         
     except Exception as e:
-        logger.error(f"Error getting conversation {conversation_id}: {str(e)}")
+        logger.error("Error fetching conversation", conversation_id=conversation_id, user_id=user_id, error=str(e))
         raise
 
 async def create_conversation(
@@ -74,7 +78,8 @@ async def create_conversation(
     db: Session
 ) -> Dict[str, Any]:
     """Create a new conversation for a user."""
-    logger.info(f"Creating conversation for user {user_id} with title '{title}'")
+    logger.info("Creating new conversation", user_id=user_id, title=title)
+    
     try:
         conversation = Conversation(
             user_id=user_id,
@@ -82,12 +87,12 @@ async def create_conversation(
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc)
         )
-        logger.debug(f"New conversation object created: {conversation}")
+        
         db.add(conversation)
         db.commit()
         db.refresh(conversation)
         
-        logger.info(f"Created conversation {conversation.id} for user {user_id}")
+        logger.info("Conversation created successfully", conversation_id=conversation.id, user_id=user_id)
         
         return {
             "id": str(conversation.id),
@@ -97,9 +102,9 @@ async def create_conversation(
         }
         
     except Exception as e:
-        logger.error(f"Error creating conversation: {str(e)}")
+        logger.error("Error creating conversation", user_id=user_id, error=str(e))
         db.rollback()
-        raise
+        raise HTTPException(status_code=500, detail="Failed to create conversation")
 
 async def update_conversation_summary(
     conversation_id: UUID,
@@ -108,6 +113,8 @@ async def update_conversation_summary(
     db: Session
 ) -> Dict[str, Any]:
     """Update the summary of a conversation."""
+    logger.debug("Updating conversation summary", conversation_id=conversation_id, user_id=user_id)
+    
     try:
         conversation = db.query(Conversation)\
             .filter(
@@ -117,6 +124,7 @@ async def update_conversation_summary(
             .first()
         
         if not conversation:
+            logger.warning("Conversation not found for summary update", conversation_id=conversation_id, user_id=user_id)
             raise HTTPException(status_code=404, detail="Conversation not found")
         
         conversation.summary = summary
@@ -124,7 +132,7 @@ async def update_conversation_summary(
         db.commit()
         db.refresh(conversation)
         
-        logger.info(f"Updated summary for conversation {conversation_id}")
+        logger.info("Conversation summary updated", conversation_id=conversation_id, user_id=user_id)
         return {
             "id": str(conversation.id),
             "title": conversation.title,
@@ -132,7 +140,7 @@ async def update_conversation_summary(
             "updated_at": conversation.updated_at.isoformat() + "Z"
         }
     except Exception as e:
-        logger.error(f"Error updating conversation summary: {str(e)}")
+        logger.error("Error updating conversation summary", conversation_id=conversation_id, user_id=user_id, error=str(e))
         raise
 
 async def delete_conversation_service(
@@ -141,6 +149,8 @@ async def delete_conversation_service(
     db: Session
 ) -> bool:
     """Delete a conversation and all its messages for a user."""
+    logger.info("Deleting conversation", conversation_id=conversation_id, user_id=user_id)
+    
     try:
         # Find the conversation that belongs to the user
         conversation = db.query(Conversation).filter(
@@ -149,17 +159,21 @@ async def delete_conversation_service(
         ).first()
         
         if not conversation:
+            logger.warning("Conversation not found for deletion", conversation_id=conversation_id, user_id=user_id)
             raise HTTPException(status_code=404, detail="Conversation not found")
         
-        db.query(Message).filter(Message.conversation_id == conversation_id).delete()
+        # Delete messages first
+        messages_deleted = db.query(Message).filter(Message.conversation_id == conversation_id).delete()
+        logger.debug("Messages deleted", conversation_id=conversation_id, count=messages_deleted)
         
+        # Delete conversation
         db.delete(conversation)
         db.commit()
         
-        logger.info(f"Successfully deleted conversation {conversation_id} for user {user_id}")
+        logger.info("Conversation deleted successfully", conversation_id=conversation_id, user_id=user_id)
         return True
         
     except Exception as e:
-        logger.error(f"Error deleting conversation {conversation_id}: {str(e)}")
+        logger.error("Error deleting conversation", conversation_id=conversation_id, user_id=user_id, error=str(e))
         db.rollback()
-        raise
+        raise HTTPException(status_code=500, detail="Failed to delete conversation")

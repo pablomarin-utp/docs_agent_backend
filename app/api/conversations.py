@@ -2,7 +2,7 @@ from app.chat.processor import process_message
 from fastapi import APIRouter, Depends, HTTPException
 from app.core.models import User, Conversation
 from app.services.auth_service import  get_current_user
-from app.services.conversation_service import get_user_conversations, create_conversation, update_conversation_summary
+from app.services.conversation_service import get_user_conversations, create_conversation, delete_conversation_service
 from app.services.messages_service import get_conversation_messages, send_message_to_conversation
 from typing import List, Dict, Any
 from app.core.database import get_db
@@ -10,25 +10,23 @@ from app.schemas.chat_schema import SendMessageRequest, CreateConversationReques
 from app.services.credit_service import deduct_credits
 from app.chat.graph_workflow import agent
 from sqlalchemy.orm import Session
-import logging
 from uuid import UUID
+from app.utils.logging_utils import get_secure_logger
 
-logger = logging.getLogger(__name__)
+logger = get_secure_logger(__name__)
 router = APIRouter()
 
 @router.get("/conversations")
 async def get_conversations(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> List[Dict[str, Any]]:
-    """
-    Endpoint to retrieve all conversations for a user.
-    Requires a valid JWT and an active user account.
-    """
-    logger.info("Retrieving conversations for user: %s", user.id)
+    """Endpoint to retrieve all conversations for a user."""
+    logger.info("Retrieving conversations for user", user_id=user.id)
 
     try:
         conversations = await get_user_conversations(user.id, db)
+        logger.info("Conversations retrieved successfully", user_id=user.id, count=len(conversations))
         return conversations
     except Exception as e:
-        logger.error(f"Error retrieving conversations: {str(e)}")
+        logger.error("Error retrieving conversations", user_id=user.id, error=str(e))
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 @router.post("/conversations")
@@ -36,19 +34,15 @@ async def new_conversation(
     request: CreateConversationRequest,
     user: User = Depends(get_current_user), 
     db: Session = Depends(get_db)) -> Dict[str, Any]:
-    """
-    Endpoint to create a new conversation for a user.
-    Requires a valid JWT and an active user account.
-    """
-    logger.info("Creating conversation for user")
-
-    logger.debug(f"User ID: {user.id}, Title: {request.title}")
+    """Endpoint to create a new conversation for a user."""
+    logger.info("Creating new conversation", user_id=user.id, title=request.title)
 
     try:
         conversation = await create_conversation(user.id, request.title, db)
+        logger.info("Conversation created successfully", user_id=user.id, conversation_id=conversation["id"])
         return conversation
     except Exception as e:
-        logger.error(f"Error creating conversation: {str(e)}")
+        logger.error("Error creating conversation", user_id=user.id, error=str(e))
         raise HTTPException(status_code=500, detail="Internal Server Error")
     
 @router.get("/conversations/{conversation_id}/messages")
@@ -57,23 +51,20 @@ async def retrieve_conversation_messages(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ) -> List[Dict[str, Any]]:
-    """
-    Endpoint to retrieve a specific conversation by ID for a user.
-    Requires a valid JWT and an active user account.
-    """
-    logger.info(f"Retrieving messages for conversation {conversation_id} for user {user.id}")
+    """Endpoint to retrieve a specific conversation by ID for a user."""
+    logger.info("Retrieving messages for conversation", conversation_id=conversation_id, user_id=user.id)
 
     try:
         conversation_uuid = UUID(conversation_id)
         messages = await get_conversation_messages(conversation_uuid, user.id, db)
-        if not messages:
-            logger.warning(f"No messages found for conversation {conversation_id}")
-
+        
+        logger.info("Messages retrieved successfully", conversation_id=conversation_id, user_id=user.id, count=len(messages))
         return messages
     except ValueError:
+        logger.warning("Invalid conversation ID format", conversation_id=conversation_id, user_id=user.id)
         raise HTTPException(status_code=400, detail="Invalid conversation ID format")
     except Exception as e:
-        logger.error(f"Error retrieving conversation messages {conversation_id}: {str(e)}")
+        logger.error("Error retrieving conversation messages", conversation_id=conversation_id, user_id=user.id, error=str(e))
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 @router.post("/conversations/{conversation_id}/messages")
@@ -84,11 +75,12 @@ async def send_message(
     db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """Send a message in a specific conversation."""
-    logger.info(f"Processing message for conversation {conversation_id} and user {user.id}")
+    logger.info("Processing message for conversation", conversation_id=conversation_id, user_id=user.id, content=request.content)
 
     try:
         conversation_uuid = UUID(conversation_id)
     except ValueError:
+        logger.warning("Invalid conversation ID format", conversation_id=conversation_id, user_id=user.id)
         raise HTTPException(status_code=400, detail="Invalid conversation ID format")
 
     try:
@@ -99,10 +91,11 @@ async def send_message(
             content=request.content,
             db=db
         )
+        logger.debug("User message saved", message_id=user_message["id"], conversation_id=conversation_id)
 
     except Exception as e:
-        logger.error(f"[Bloque 1] Error verificando conversación o guardando mensaje del usuario: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Error al guardar el mensaje del usuario o cargar la conversación")
+        logger.error("Error saving user message", conversation_id=conversation_id, user_id=user.id, error=str(e))
+        raise HTTPException(status_code=500, detail="Error al guardar el mensaje del usuario")
 
     try:
         # Process message and get conversation history
@@ -113,37 +106,61 @@ async def send_message(
             db=db
         )
         
+        logger.debug("Message processed, invoking agent", conversation_id=conversation_id, user_id=user.id)
+        
         # Invoke agent with the message history
         result = await agent.ainvoke({"messages": messages})
 
         # Extract the last message content
         full_state = result.get("messages", [])
         if full_state and hasattr(full_state[-1], 'content'):
-            last = full_state[-1].content
+            assistant_response = full_state[-1].content
         else:
-            last = "No se pudo generar una respuesta"
+            assistant_response = "No se pudo generar una respuesta"
+            
+        logger.debug("Agent response generated", conversation_id=conversation_id, user_id=user.id)
 
     except Exception as e:
-        logger.error(f"[Bloque 2] Error procesando mensaje con el agente: {str(e)}", exc_info=True)
+        logger.error("Error processing message with agent", conversation_id=conversation_id, user_id=user.id, error=str(e))
         raise HTTPException(status_code=500, detail="Error al procesar el mensaje con el agente")
 
     try:
         assistant_message = await send_message_to_conversation(
             conversation_id=conversation_uuid,
             role="assistant",
-            content=last,
+            content=assistant_response,
             db=db
         )
 
         credits_deducted = await deduct_credits(user.id, amount=1, db=db)
 
+        logger.info("Message processed successfully", conversation_id=conversation_id, user_id=user.id, credits_deducted=credits_deducted)
         return {"message": assistant_message, "credits_remaining": credits_deducted}
 
     except Exception as e:
-        logger.error(f"[Bloque 3] Error guardando respuesta del asistente o actualizando resumen: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Error al guardar la respuesta o actualizar la conversación")
+        logger.error("Error saving assistant response", conversation_id=conversation_id, user_id=user.id, error=str(e))
+        raise HTTPException(status_code=500, detail="Error al guardar la respuesta del asistente")
 
-#-------------DEPRECATED ENDPOINTS----------------
+@router.delete("/conversations/{conversation_id}")
+async def delete_conversation(
+    conversation_id: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> Dict[str, bool]:
+    """Endpoint to delete a specific conversation by ID for a user."""
+    logger.info("Deleting conversation", conversation_id=conversation_id, user_id=user.id)
+
+    try:
+        conversation_uuid = UUID(conversation_id)
+        await delete_conversation_service(conversation_uuid, user.id, db)
+        logger.info("Conversation deleted successfully", conversation_id=conversation_id, user_id=user.id)
+        return {"message": True}
+    except ValueError:
+        logger.warning("Invalid conversation ID format", conversation_id=conversation_id, user_id=user.id)
+        raise HTTPException(status_code=400, detail="Invalid conversation ID format")
+    except Exception as e:
+        logger.error("Error deleting conversation", conversation_id=conversation_id, user_id=user.id, error=str(e))
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
 """

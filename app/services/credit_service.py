@@ -1,11 +1,11 @@
 from sqlalchemy.orm import Session
 from app.core.models import User
 from typing import Dict, Any
-import logging
 from fastapi import HTTPException
 from uuid import UUID
+from app.utils.logging_utils import get_secure_logger
 
-logger = logging.getLogger(__name__)
+logger = get_secure_logger(__name__)
 
 async def deduct_credits(
     user_id: UUID,
@@ -13,24 +13,27 @@ async def deduct_credits(
     db: Session
 ) -> bool:
     """Deduct credits from user account."""
+    logger.info("Deducting credits", user_id=user_id, amount=amount)
+    
     try:
         user = db.query(User).filter(User.id == user_id).first()
         if not user:
+            logger.warning("User not found for credit deduction", user_id=user_id)
             raise HTTPException(status_code=404, detail="User not found")
         
         if user.credits < amount:
-            logger.warning(f"Insufficient credits for user {user_id}: {user.credits} < {amount}")
+            logger.warning("Insufficient credits", user_id=user_id, current_credits=user.credits, requested_amount=amount)
             return False
         
         user.credits -= amount
         db.commit()
         db.refresh(user)
         
-        logger.info(f"Deducted {amount} credits from user {user_id}. Remaining: {user.credits}")
+        logger.info("Credits deducted successfully", user_id=user_id, amount_deducted=amount, remaining_credits=user.credits)
         return True
         
     except Exception as e:
-        logger.error(f"Error deducting credits: {str(e)}")
+        logger.error("Error deducting credits", user_id=user_id, amount=amount, error=str(e))
         raise
 
 async def add_credits(
@@ -39,18 +42,21 @@ async def add_credits(
     db: Session
 ) -> Dict[str, Any]:
     """Add credits to user account."""
+    logger.info("Adding credits", user_id=user_id, amount=amount)
+    
     try:
         user = db.query(User).filter(User.id == user_id).first()
         if not user:
+            logger.warning("User not found for credit addition", user_id=user_id)
             raise HTTPException(status_code=404, detail="User not found")
         
         user.credits += amount
         db.commit()
         db.refresh(user)
         
-        logger.info(f"Added {amount} credits to user {user_id}. Total: {user.credits}")
+        logger.info("Credits added successfully", user_id=user_id, amount_added=amount, total_credits=user.credits)
         return {"credits": user.credits, "message": f"Added {amount} credits"}
         
     except Exception as e:
-        logger.error(f"Error adding credits: {str(e)}")
+        logger.error("Error adding credits", user_id=user_id, amount=amount, error=str(e))
         raise

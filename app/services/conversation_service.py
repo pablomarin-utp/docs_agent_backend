@@ -134,3 +134,32 @@ async def update_conversation_summary(
     except Exception as e:
         logger.error(f"Error updating conversation summary: {str(e)}")
         raise
+
+async def delete_conversation_service(
+    conversation_id: UUID,
+    user_id: UUID,
+    db: Session
+) -> bool:
+    """Delete a conversation and all its messages for a user."""
+    try:
+        # Find the conversation that belongs to the user
+        conversation = db.query(Conversation).filter(
+            Conversation.id == conversation_id,
+            Conversation.user_id == user_id
+        ).first()
+        
+        if not conversation:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        
+        db.query(Message).filter(Message.conversation_id == conversation_id).delete()
+        
+        db.delete(conversation)
+        db.commit()
+        
+        logger.info(f"Successfully deleted conversation {conversation_id} for user {user_id}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error deleting conversation {conversation_id}: {str(e)}")
+        db.rollback()
+        raise

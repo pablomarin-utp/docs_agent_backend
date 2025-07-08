@@ -2,7 +2,7 @@ from app.chat.processor import process_message
 from fastapi import APIRouter, Depends, HTTPException
 from app.core.models import User, Conversation
 from app.services.auth_service import  get_current_user
-from app.services.conversation_service import get_user_conversations, create_conversation, update_conversation_summary
+from app.services.conversation_service import get_user_conversations, create_conversation, delete_conversation_service
 from app.services.messages_service import get_conversation_messages, send_message_to_conversation
 from typing import List, Dict, Any
 from app.core.database import get_db
@@ -143,8 +143,30 @@ async def send_message(
     except Exception as e:
         logger.error(f"[Bloque 3] Error guardando respuesta del asistente o actualizando resumen: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error al guardar la respuesta o actualizar la conversación")
+    
 
-#-------------DEPRECATED ENDPOINTS----------------
+@router.delete("/conversations/{conversation_id}")
+async def delete_conversation(
+    conversation_id: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> Dict[str, bool]:
+    """
+    Endpoint to delete a specific conversation by ID for a user.
+    Requires a valid JWT and an active user account.
+    """
+
+    logger.info(f"Deleting conversation {conversation_id} for user {user.id}")
+
+    try:
+        conversation_uuid = UUID(conversation_id)
+        await delete_conversation_service(conversation_uuid, user.id, db)
+        return {"message": True}
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid conversation ID format")
+    except Exception as e:
+        logger.error(f"Error deleting conversation {conversation_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
 """

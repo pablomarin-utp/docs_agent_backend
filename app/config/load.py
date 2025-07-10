@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Azure OpenAI Configuration
 AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
 AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
 AZURE_OPENAI_DEPLOYMENT_NAME = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME")
@@ -10,10 +11,26 @@ AZURE_OPENAI_EMBEDDINGS_API_KEY = os.getenv("AZURE_OPENAI_EMBEDDINGS_API_KEY")
 AZURE_OPENAI_EMBEDDINGS_ENDPOINT = os.getenv("AZURE_OPENAI_EMBEDDINGS_ENDPOINT")
 AZURE_OPENAI_EMBEDDINGS_DEPLOYMENT_NAME = os.getenv("AZURE_OPENAI_EMBEDDINGS_DEPLOYMENT_NAME")
 AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION")
+
+# Security
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+SECRET_KEY = os.getenv("SECRET_KEY")
+
+# External Services
 QDRANT_URL = os.getenv("QDRANT_URL")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 GOOGLE_CLOUD_CLIENT_ID = os.getenv("GOOGLE_CLOUD_CLIENT_ID")
 GOOGLE_CLOUD_CLIENT_SECRET = os.getenv("GOOGLE_CLOUD_CLIENT_SECRET")
-SECRET_KEY = os.getenv("SECRET_KEY")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+
+# Frontend URLs - maneja ambiente de producción
+FRONTEND_URL_DEV = "http://localhost:5173"
+FRONTEND_URL_PROD = os.getenv("FRONTEND_URL_PROD", "https://your-frontend.onrender.com")
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+
+# Selecciona la URL correcta según el ambiente
+if ENVIRONMENT == "production":
+    FRONTEND_URL = FRONTEND_URL_PROD
+else:
+    FRONTEND_URL = os.getenv("FRONTEND_URL", FRONTEND_URL_DEV)
+
+BACKEND_URL = os.getenv("BACKEND_URL")

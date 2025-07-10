@@ -1,9 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
+import os
 from app.api.routes import router as api_router
-from app.core.database import test_connection
+from app.core.database import test_connection, init_db
 from app.config.middleware import add_middlewares
+from app.config.load import FRONTEND_URL as frontend_url, BACKEND_URL as backend_url
 from contextlib import asynccontextmanager
 from app.utils.logging_utils import get_secure_logger
 
@@ -14,25 +16,28 @@ logger = get_secure_logger(__name__)
 async def lifespan(app: FastAPI):
     logger.info("Application starting up")
     try:
-        test_connection()
-        logger.info("Database connection established successfully")
+        # Test Supabase connection and check existing tables
+        init_db()
+        logger.info("Supabase connection and tables verified successfully")
+        
     except Exception as e:
-        logger.critical("Failed to establish database connection", error=str(e))
+        logger.critical("Failed to connect to Supabase", error=str(e))
         raise
     yield
     logger.info("Application shutting down")
 
 app = FastAPI(
     title="AI Docs Agent",
-    description="Backend API for AI Assistant",
+    description="Backend API for AI Assistant with Azure OpenAI and Supabase",
     version="1.0.0",
     lifespan=lifespan,
 )
 
+# CORS origins - incluye producción
 origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:5174"
+    #"http://localhost:5173", //esta es la URL de desarrollo de Vite, por si la corren en local
+    frontend_url,
+    backend_url,  # Tu backend URL
 ]
 
 app.add_middleware(
@@ -47,11 +52,11 @@ logger.info("CORS middleware configured", origins=origins)
 
 # Add custom middlewares
 add_middlewares(app)
-logger.info("Custom middlewares added")
 
+# Include API routes
 app.include_router(api_router)
-logger.info("API router included")
 
 if __name__ == "__main__":
-    logger.info("Starting application server", host="127.0.0.1", port=8001)
-    uvicorn.run("main:app", host="127.0.0.1", port=8001, reload=True)
+    # Get port from environment (Render sets PORT automatically)
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)

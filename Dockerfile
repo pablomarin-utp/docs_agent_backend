@@ -1,11 +1,8 @@
-# Use Python 3.11 slim image for better compatibility
 FROM python:3.11-slim
 
-# Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PIP_NO_CACHE_DIR=1
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -13,7 +10,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Poetry with specific version
+# Install Poetry
 RUN pip install poetry==1.8.3
 
 # Set work directory
@@ -22,24 +19,16 @@ WORKDIR /app
 # Copy dependency files
 COPY pyproject.toml poetry.lock* ./
 
-# Configure Poetry and install dependencies with retries
+# Configure Poetry and install dependencies
 RUN poetry config virtualenvs.create false \
-    && poetry config installer.max-workers 10 \
-    && poetry config installer.parallel true \
-    && for i in {1..3}; do \
-        poetry install --only=main --no-interaction --no-ansi && break || \
-        (echo "Attempt $i failed, retrying..." && sleep 5); \
-    done
+    && poetry install --only=main --no-interaction --no-ansi
 
 # Copy application code
 COPY . .
 
-# Expose port
-EXPOSE 8001
-
-# Health check
+# Health check with dynamic port
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8001/health || exit 1
+    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
-# Run the application
-CMD ["gunicorn", "main:app", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8001"]
+# OPTIMIZADO: Solo 1 worker para 512MB RAM
+CMD ["sh", "-c", "gunicorn main:app -w 1 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-8000} --max-requests 1000 --max-requests-jitter 50 --preload"]

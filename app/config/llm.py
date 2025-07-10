@@ -7,7 +7,8 @@ from app.config.load import (
 )
 
 llm_model = init_chat_model(
-    model="azure_openai:gpt-4o-mini",
+    model="gpt-4o-mini",
+    model_provider="azure_openai",
     azure_deployment=AZURE_OPENAI_DEPLOYMENT_NAME,
     openai_api_key=AZURE_OPENAI_API_KEY,
     azure_endpoint=AZURE_OPENAI_ENDPOINT,

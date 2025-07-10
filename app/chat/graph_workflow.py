@@ -2,8 +2,7 @@ from langgraph.graph import StateGraph, END, START
 from app.schemas.chat_schema import AgentState
 from app.config.llm import llm_model
 from app.chat.tools import tools_list
-from langgraph.prebuilt import ToolNode
-from langgraph.prebuilt import create_react_agent
+from langgraph.prebuilt.chat_agent_executor import create_react_agent
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage, SystemMessage
 from langchain.chains import LLMChain
 from langchain_core.prompts import PromptTemplate
@@ -54,8 +53,6 @@ def summary_hook(state: AgentState):
 # Create the main agent with tools and summarization
 agent = create_react_agent(
     model=llm_model.bind_tools(tools_list),
-    tools=tools_list,
-    pre_model_hook=summary_hook,
-    state_schema=AgentState
+    tools=tools_list
 )
 

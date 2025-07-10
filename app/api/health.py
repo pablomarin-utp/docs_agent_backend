@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+from sqlalchemy import text  # ← AGREGAR IMPORT
 from app.core.database import get_db
 from app.config.qdrant import qdrant_client
 from typing import Dict, Any
@@ -25,7 +26,7 @@ async def health_check(db: Session = Depends(get_db)) -> Dict[str, Any]:
     
     # Check database connection
     try:
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))  # ← USAR text()
         health_status["components"]["database"] = "healthy"
         logger.debug("Database health check passed")
     except Exception as e:

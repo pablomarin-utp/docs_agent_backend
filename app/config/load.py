@@ -23,11 +23,10 @@ GOOGLE_CLOUD_CLIENT_ID = os.getenv("GOOGLE_CLOUD_CLIENT_ID")
 GOOGLE_CLOUD_CLIENT_SECRET = os.getenv("GOOGLE_CLOUD_CLIENT_SECRET")
 
 # Frontend URLs - maneja ambiente de producción
-FRONTEND_URL_DEV = "http://localhost:5173"
 FRONTEND_URL_PROD = os.getenv("FRONTEND_URL_PROD", "https://your-frontend.onrender.com")
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+FRONTEND_URL_DEV = "http://localhost:5173"
 FRONTEND_URL_PROD = os.getenv("FRONTEND_URL_PROD")
 
 

@@ -5,10 +5,9 @@ import os
 from app.api.routes import router as api_router
 from app.core.database import test_connection, init_db
 from app.config.middleware import add_middlewares
-from app.config.load import FRONTEND_URL_PROD as frontend_url,FRONTEND_URL_DEV as frontend_url_dev, BACKEND_URL as backend_url
+from app.config.load import FRONTEND_URL_PROD as frontend_url
 from contextlib import asynccontextmanager
 from app.utils.logging_utils import get_secure_logger
-from app.config.urls_config import origins
 # Setup secure logging
 logger = get_secure_logger(__name__)
 
@@ -33,7 +32,14 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-
+origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173", 
+    "http://localhost:5174",
+    "https://agent-frontend-phi.vercel.app",
+    frontend_url,
+    "https://ai-docs-agent.onrender.com"
+]
 
 app.add_middleware(
     CORSMiddleware,

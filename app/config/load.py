@@ -27,10 +27,8 @@ FRONTEND_URL_DEV = "http://localhost:5173"
 FRONTEND_URL_PROD = os.getenv("FRONTEND_URL_PROD", "https://your-frontend.onrender.com")
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
-# Selecciona la URL correcta según el ambiente
-if ENVIRONMENT == "production":
-    FRONTEND_URL = FRONTEND_URL_PROD
-else:
-    FRONTEND_URL = os.getenv("FRONTEND_URL", FRONTEND_URL_DEV)
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+FRONTEND_URL_PROD = os.getenv("FRONTEND_URL_PROD")
+
 
 BACKEND_URL = os.getenv("BACKEND_URL")

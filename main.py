@@ -5,7 +5,7 @@ import os
 from app.api.routes import router as api_router
 from app.core.database import test_connection, init_db
 from app.config.middleware import add_middlewares
-from app.config.load import FRONTEND_URL as frontend_url, BACKEND_URL as backend_url
+from app.config.load import FRONTEND_URL_PROD as frontend_url,FRONTEND_URL_DEV as frontend_url_dev, BACKEND_URL as backend_url
 from contextlib import asynccontextmanager
 from app.utils.logging_utils import get_secure_logger
 
@@ -37,6 +37,7 @@ app = FastAPI(
 origins = [
     #"http://localhost:5173", //esta es la URL de desarrollo de Vite, por si la corren en local
     frontend_url,
+    frontend_url_dev, 
     backend_url,  # Tu backend URL
 ]
 
